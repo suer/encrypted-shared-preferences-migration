@@ -8,6 +8,7 @@ import androidx.security.crypto.MasterKey
 
 class EncryptedSharedPreferencesMigration(
     private val context: Context,
+    private val cryptoManager: CryptoManager,
 ) : DataMigration<Preferences> {
 
     private val encryptedSharedPreferences by lazy {
@@ -33,7 +34,7 @@ class EncryptedSharedPreferencesMigration(
     override suspend fun migrate(currentData: Preferences): Preferences {
         val oldValue = encryptedSharedPreferences.getString(OLD_KEY, "") ?: ""
         return currentData.toMutablePreferences().apply {
-            this[Preference.TEXT_KEY] = oldValue
+            this[Preference.TEXT_KEY] = cryptoManager.encrypt(oldValue)
         }.toPreferences()
     }
 
