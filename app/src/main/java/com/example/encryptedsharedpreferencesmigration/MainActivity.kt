@@ -13,14 +13,18 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.encryptedsharedpreferencesmigration.ui.theme.EncryptedSharedPreferencesMigrationTheme
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -29,8 +33,12 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             EncryptedSharedPreferencesMigrationTheme {
+                val scope = rememberCoroutineScope()
+                var text by remember { mutableStateOf("") }
+                LaunchedEffect(Unit) {
+                    text = preference.textFlow.first()
+                }
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    var text by remember { mutableStateOf(preference.load()) }
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -46,7 +54,7 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier.fillMaxWidth(),
                         )
                         Button(
-                            onClick = { preference.save(text) },
+                            onClick = { scope.launch { preference.save(text) } },
                             modifier = Modifier.padding(top = 16.dp),
                         ) {
                             Text("保存")
