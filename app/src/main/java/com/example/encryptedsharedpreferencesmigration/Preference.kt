@@ -1,37 +1,35 @@
 package com.example.encryptedsharedpreferencesmigration
 
 import android.content.Context
-import android.content.SharedPreferences
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+
+private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
+    name = "preference",
+    produceMigrations = { context ->
+        listOf(EncryptedSharedPreferencesMigration(context))
+    },
+)
 
 class Preference(context: Context) {
-    private val sharedPreferences: SharedPreferences
+    private val dataStore = context.dataStore
 
-    init {
-        val masterKey =
-            MasterKey
-                .Builder(context, MasterKey.DEFAULT_MASTER_KEY_ALIAS)
-                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                .build()
-
-        sharedPreferences = EncryptedSharedPreferences.create(
-            context,
-            PREFERENCE_FILENAME,
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-        )
+    val textFlow: Flow<String> = dataStore.data.map { prefs ->
+        prefs[TEXT_KEY] ?: ""
     }
 
-    fun save(value: String) {
-        sharedPreferences.edit().putString(KEY, value).apply()
+    suspend fun save(value: String) {
+        dataStore.edit { prefs ->
+            prefs[TEXT_KEY] = value
+        }
     }
-
-    fun load(): String = sharedPreferences.getString(KEY, "") ?: ""
 
     companion object {
-        private const val KEY = "text"
-        private const val PREFERENCE_FILENAME = "encrypted-preference-sample"
+        internal val TEXT_KEY = stringPreferencesKey("text")
     }
 }
