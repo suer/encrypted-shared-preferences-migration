@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package com.example.encryptedsharedpreferencesmigration
 
 import android.content.Context
