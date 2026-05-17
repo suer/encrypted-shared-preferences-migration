@@ -2,36 +2,27 @@ package com.example.encryptedsharedpreferencesmigration
 
 import android.content.Context
 import android.content.SharedPreferences
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 
 class Preference(context: Context) {
-    private val sharedPreferences: SharedPreferences
+    private val cryptoManager = CryptoManager(context)
+    private val sharedPreferences: SharedPreferences =
+        context.getSharedPreferences(PREFERENCE_FILENAME, Context.MODE_PRIVATE)
 
     init {
-        val masterKey =
-            MasterKey
-                .Builder(context, MasterKey.DEFAULT_MASTER_KEY_ALIAS)
-                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                .build()
-
-        sharedPreferences = EncryptedSharedPreferences.create(
-            context,
-            PREFERENCE_FILENAME,
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-        )
+        EncryptedSharedPreferencesMigration(context).migrateIfNeeded(sharedPreferences, cryptoManager)
     }
 
     fun save(value: String) {
-        sharedPreferences.edit().putString(KEY, value).apply()
+        sharedPreferences.edit().putString(KEY, cryptoManager.encrypt(value)).apply()
     }
 
-    fun load(): String = sharedPreferences.getString(KEY, "") ?: ""
+    fun load(): String {
+        val stored = sharedPreferences.getString(KEY, null) ?: return ""
+        return runCatching { cryptoManager.decrypt(stored) }.getOrDefault("")
+    }
 
     companion object {
         private const val KEY = "text"
-        private const val PREFERENCE_FILENAME = "encrypted-preference-sample"
+        private const val PREFERENCE_FILENAME = "preference"
     }
 }
